@@ -30,7 +30,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mvn sonar:sonar \
+          mvn clean verify sonar:sonar \
             -Dsonar.projectKey=TheRexInformatics_ingdevops_ev3 \
             -Dsonar.organization=therexinformatics \
             -Dsonar.host.url=https://sonarcloud.io
