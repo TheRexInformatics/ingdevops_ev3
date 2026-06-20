@@ -25,6 +25,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      # ==========================================
+      # SE AGREGÓ 'clean verify' AL COMANDO MAVEN
+      # ==========================================
       - name: "SonarQube Scan & Compliance Check"
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
