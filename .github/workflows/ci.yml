@@ -1,0 +1,82 @@
+name: "CI/CD: Quality Gates, Build and Push to Docker Hub"
+
+on:
+  push:
+    branches: [ "main", "develop" ] # Se ejecuta al subir cambios en estas ramas
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña Actions
+
+jobs:
+  build-and-push:
+    name: "Verify Quality & Push to Docker Hub"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Clave para que SonarQube analice todo el historial correctamente
+
+      - name: "Set up JDK 21"
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # ==========================================
+      # PASO NUEVO: AUDITORÍA AUTOMATIZADA (IE5)
+      # ==========================================
+      - name: "SonarQube Scan & Compliance Check"
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mvn sonar:sonar \
+            -Dsonar.projectKey=subcripciones-backend \
+            -Dsonar.host.url=https://sonarcloud.io
+
+      # ==========================================
+      # PASO NUEVO: MECANISMO DE INTERRUPCIÓN (IE6)
+      # ==========================================
+      - name: "Quality Gate Break Check"
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        timeout-minutes: 5 # Evita que se quede colgado esperando infinitamente
+
+      # ==========================================
+      # PASOS EXISTENTES REORGANIZADOS (DOCKER)
+      # ==========================================
+      - name: "Login to Docker Hub"
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: "Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: "Extract Metadata"
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/suscripciones-api
+          tags: |
+            type=raw,value=latest
+            type=sha,value={{sha}}
+
+      - name: "Build and Push Image"
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: "Finalización Exitosa"
+        run: echo "🚀 Calidad validada e Imagen subida con éxito a Docker Hub"

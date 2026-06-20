@@ -1,0 +1,64 @@
+services:
+  subcripciones-app:
+    build: .
+    container_name: subcripciones-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    volumes:
+      - app-logs:/app/logs 
+    networks:
+      - devops-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-server
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - devops-network
+    depends_on:
+      - subcripciones-app
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-dashboard
+    ports:
+      - "3000:3000"
+    networks:
+      - devops-network
+    depends_on:
+      - prometheus
+      - loki
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki-server
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - devops-network
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail-agent
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml 
+      - app-logs:/var/log/app 
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - devops-network
+    depends_on:
+      - loki
+
+volumes:
+  app-logs: 
+    driver: local
+
+networks:
+  devops-network:
+    driver: bridge

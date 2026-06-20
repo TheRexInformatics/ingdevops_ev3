@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: suscripciones-backend
+  namespace: default
+  labels:
+    app: suscripciones-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: suscripciones-backend
+  template:
+    metadata:
+      labels:
+        app: suscripciones-backend
+      # ===================================================================
+      # CONFIGURACIÓN CRÍTICA PARA PROMETHEUS EN KUBERNETES (IE1)
+      # ===================================================================
+      annotations:
+        prometheus.io/scrape: "true"             # Le dice a Prometheus que este pod genera métricas
+        prometheus.io/path: "/actuator/prometheus" # Ruta exacta de las métricas
+        prometheus.io/port: "8080"               # Puerto del contenedor
+    spec:
+      containers:
+        - name: suscripciones-api
+          image: TU_USUARIO_DOCKERHUB/suscripciones-api:latest # Reemplaza con tu usuario real
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "default"
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: suscripciones-backend-service
+  namespace: default
+  labels:
+    app: suscripciones-backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: suscripciones-backend
