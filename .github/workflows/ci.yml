@@ -25,9 +25,6 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # ==========================================
-      # SE AGREGÓ 'clean verify' AL COMANDO MAVEN
-      # ==========================================
       - name: "SonarQube Scan & Compliance Check"
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -38,10 +35,15 @@ jobs:
             -Dsonar.organization=therexinformatics \
             -Dsonar.host.url=https://sonarcloud.io
 
+      # ==========================================
+      # SE AGREGÓ LA RUTA CORRECTA DEL REPORTE MAVEN
+      # ==========================================
       - name: "Quality Gate Break Check"
         uses: sonarsource/sonarqube-quality-gate-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scanMetadataReportFile: target/sonar/report-task.txt
         timeout-minutes: 5
 
       - name: "Login to Docker Hub"
