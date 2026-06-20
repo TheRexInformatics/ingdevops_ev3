@@ -14,17 +14,14 @@ spec:
     metadata:
       labels:
         app: suscripciones-backend
-      # ===================================================================
-      # CONFIGURACIÓN CRÍTICA PARA PROMETHEUS EN KUBERNETES (IE1)
-      # ===================================================================
       annotations:
-        prometheus.io/scrape: "true"             # Le dice a Prometheus que este pod genera métricas
-        prometheus.io/path: "/actuator/prometheus" # Ruta exacta de las métricas
-        prometheus.io/port: "8080"               # Puerto del contenedor
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "8080"
     spec:
       containers:
         - name: suscripciones-api
-          image: TU_USUARIO_DOCKERHUB/suscripciones-api:latest # Reemplaza con tu usuario real
+          image: ECR_IMAGE_PLACEHOLDER
           ports:
             - containerPort: 8080
           env:
