@@ -63,8 +63,8 @@ jobs:
       - name: "Build imagen Backend y push a ECR"
         run: |
           docker build -t suscripciones-backend .
-          docker tag suscripciones-backend:latest ${{ secrets.ECR_REPOSITORY }}:latest
-          docker push ${{ secrets.ECR_REPOSITORY }}:latest
+          docker tag suscripciones-backend:latest 093239445247.dkr.ecr.us-east-1.amazonaws.com/suscripciones-backend:latest
+          docker push 093239445247.dkr.ecr.us-east-1.amazonaws.com/suscripciones-backend:latest
 
       # ==========================================
       # DESPLIEGUE CONTINUO EN AWS ECS
@@ -72,8 +72,8 @@ jobs:
       - name: "Descargar Task Definition actual"
         run: |
           aws ecs describe-task-definition \
-            -—task-definition ${{ secrets.ECS_TASK_DEFINITION_NAME }} \
-            -—query taskDefinition > task-definition.json
+            --task-definition ${{ secrets.ECS_TASK_DEFINITION_NAME }} \
+            --query taskDefinition > task-definition.json
 
       - name: "Actualizar Tag de la imagen en la Task Def"
         id: render-task-def
@@ -81,7 +81,7 @@ jobs:
         with:
           task-definition: task-definition.json
           container-name: webapp  # Coincide exactamente con el "name" de tu JSON de ECS
-          image: ${{ secrets.ECR_REPOSITORY }}:latest
+          image: 093239445247.dkr.ecr.us-east-1.amazonaws.com/suscripciones-backend:latest
 
       - name: "Desplegar nueva Task Definition en el Servicio ECS"
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
