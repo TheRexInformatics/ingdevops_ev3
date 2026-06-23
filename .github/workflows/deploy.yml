@@ -6,8 +6,8 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  EKS_CLUSTER_NAME: ev3devops
-  ECR_REPOSITORY: ev-devops
+  EKS_CLUSTER_NAME: eks-cluster-ev3
+  ECR_REPOSITORY: ev-devops3
 
 jobs:
   deploy:
@@ -36,20 +36,24 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: latest
       run: |
+        # 1. Construye la imagen Docker localmente usando el archivo Dockerfile de la raíz
         docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
+        
+        # 2. Sube la imagen empaquetada a tu repositorio privado de AWS ECR
         docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
 
     - name: Update kubeconfig for EKS
       run: |
+        # Configura las credenciales de la máquina virtual de GitHub para interactuar con tu Kubernetes en AWS
         aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
 
     - name: Deploy to EKS
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
-        # Reemplaza ECR_IMAGE_PLACEHOLDER por tu URL de imagen
+        # Reemplaza la etiqueta temporal ECR_IMAGE_PLACEHOLDER en tu deployment.yml por la ruta real de AWS ECR
         sed -i "s|ECR_IMAGE_PLACEHOLDER|$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest|g" k8s/deployment.yml
         
-        # Despliega en AWS
+        # Aplica los manifiestos en el namespace 'default' del clúster orquestado
         kubectl apply -f k8s/deployment.yml
         kubectl apply -f k8s/service.yml
