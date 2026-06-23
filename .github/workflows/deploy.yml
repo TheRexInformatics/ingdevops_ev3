@@ -8,7 +8,7 @@ env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: suscripciones-backend
   ECS_CLUSTER: suscripciones-cluster
-  ECS_SERVICE: webapp-lab-service-sw5buezb
+  ECS_SERVICE: webapp-lab-service-asf242jl
 
 jobs:
   deploy:

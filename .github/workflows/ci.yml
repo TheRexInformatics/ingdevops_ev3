@@ -25,7 +25,6 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # Ejecuta pruebas unitarias y envía el reporte a SonarCloud
       - name: "SonarQube Scan & Compliance Check"
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -36,7 +35,6 @@ jobs:
             -Dsonar.organization=therexinformatics \
             -Dsonar.host.url=https://sonarcloud.io
 
-      # VALIDA EL QUALITY GATE
       - name: "Quality Gate Break Check"
         uses: sonarsource/sonarqube-quality-gate-action@v1
         env:
@@ -45,9 +43,6 @@ jobs:
           scanMetadataReportFile: target/sonar/report-task.txt
         timeout-minutes: 5
 
-      # ==========================================
-      # CONFIGURACIÓN Y AUTENTICACIÓN EN AWS
-      # ==========================================
       - name: "Configurar credenciales AWS"
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -59,16 +54,12 @@ jobs:
       - name: "Login en Amazon ECR"
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Construye la imagen Docker del Backend y la sube al registro privado ECR
       - name: "Build imagen Backend y push a ECR"
         run: |
           docker build -t suscripciones-backend .
           docker tag suscripciones-backend:latest 093239445247.dkr.ecr.us-east-1.amazonaws.com/suscripciones-backend:latest
           docker push 093239445247.dkr.ecr.us-east-1.amazonaws.com/suscripciones-backend:latest
 
-      # ==========================================
-      # DESPLIEGUE FORZADO DIRECTO EN EL SERVICIO
-      # ==========================================
       - name: "Forzar despliegue en el Servicio ECS"
         run: |
           aws ecs update-service \
