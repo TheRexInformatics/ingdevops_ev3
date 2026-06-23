@@ -1,4 +1,4 @@
-name: Deploy to Amazon EKS
+name: "CI/CD: Quality Gates, Build and Deploy to AWS ECS"
 
 on:
   push:
@@ -6,12 +6,13 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  EKS_CLUSTER_NAME: eks-cluster-ev3
-  ECR_REPOSITORY: ev-devops3
+  ECR_REPOSITORY: suscripciones-backend
+  ECS_CLUSTER: suscripciones-cluster
+  ECS_SERVICE: webapp-lab-service-sw5buezb
 
 jobs:
   deploy:
-    name: Build, Push and Deploy
+    name: Build, Push and Deploy to ECS
     runs-on: ubuntu-latest
 
     steps:
@@ -36,24 +37,26 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: latest
       run: |
-        # 1. Construye la imagen Docker localmente usando el archivo Dockerfile de la raíz
         docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
-        
-        # 2. Sube la imagen empaquetada a tu repositorio privado de AWS ECR
         docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+        echo "image=$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-    - name: Update kubeconfig for EKS
+    - name: Download active Task Definition from ECS
       run: |
-        # Configura las credenciales de la máquina virtual de GitHub para interactuar con tu Kubernetes en AWS
-        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+        aws ecs describe-task-definition --task-definition webapp-lab --query taskDefinition > task-definition.json
 
-    - name: Deploy to EKS
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      run: |
-        # Reemplaza la etiqueta temporal ECR_IMAGE_PLACEHOLDER en tu deployment.yml por la ruta real de AWS ECR
-        sed -i "s|ECR_IMAGE_PLACEHOLDER|$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest|g" k8s/deployment.yml
-        
-        # Aplica los manifiestos en el namespace 'default' del clúster orquestado
-        kubectl apply -f k8s/deployment.yml
-        kubectl apply -f k8s/service.yml
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: render-web-container
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: task-definition.json
+        container-name: webapp-lab
+        image: ${{ steps.build-image.outputs.image }}
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      with:
+        task-definition: ${{ steps.render-web-container.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: false
