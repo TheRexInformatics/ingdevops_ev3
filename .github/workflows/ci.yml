@@ -25,7 +25,7 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # Ejecuta pruebas unitarias y envía el reporte a SonarCloud (IE3 e IE5)
+      # Ejecuta pruebas unitarias y envía el reporte a SonarCloud
       - name: "SonarQube Scan & Compliance Check"
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -36,7 +36,7 @@ jobs:
             -Dsonar.organization=therexinformatics \
             -Dsonar.host.url=https://sonarcloud.io
 
-      # VALIDA EL QUALITY GATE (Mecanismo de interrupción - IE6)
+      # VALIDA EL QUALITY GATE
       - name: "Quality Gate Break Check"
         uses: sonarsource/sonarqube-quality-gate-action@v1
         env:
@@ -53,7 +53,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} # Crucial para AWS Academy / Learner Labs
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: "Login en Amazon ECR"
@@ -67,29 +67,15 @@ jobs:
           docker push 093239445247.dkr.ecr.us-east-1.amazonaws.com/suscripciones-backend:latest
 
       # ==========================================
-      # DESPLIEGUE CONTINUO EN AWS ECS
+      # DESPLIEGUE FORZADO DIRECTO EN EL SERVICIO
       # ==========================================
-      - name: "Descargar Task Definition actual"
+      - name: "Forzar despliegue en el Servicio ECS"
         run: |
-          aws ecs describe-task-definition \
-            --task-definition ${{ secrets.ECS_TASK_DEFINITION_NAME }} \
-            --query taskDefinition > task-definition.json
-
-      - name: "Actualizar Tag de la imagen en la Task Def"
-        id: render-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-definition.json
-          container-name: webapp  # Coincide exactamente con el "name" de tu JSON de ECS
-          image: 093239445247.dkr.ecr.us-east-1.amazonaws.com/suscripciones-backend:latest
-
-      - name: "Desplegar nueva Task Definition en el Servicio ECS"
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
-          service: ${{ secrets.ECS_SERVICE_NAME }}
-          cluster: ${{ secrets.ECS_CLUSTER }}
-          wait-for-service-stability: true
+          aws ecs update-service \
+            --cluster ${{ secrets.ECS_CLUSTER }} \
+            --service ${{ secrets.ECS_SERVICE_NAME }} \
+            --force-new-deployment \
+            --region ${{ secrets.AWS_REGION }}
 
       - name: "Finalización Exitosa"
-        run: echo "🚀 Calidad validada y Microservicio desplegado con éxito en AWS ECS"
+        run: echo "🚀 Imagen enviada y actualización de servicio forzada en AWS ECS"
